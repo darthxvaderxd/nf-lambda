@@ -77,10 +77,6 @@ export default class WebServer {
   }
 
   private doOns(cb: (body: string | object | undefined) => void, req: Request, res: ServerResponse) {
-    res.on('finish', () => {
-      logger('info', `${req.connection.remoteAddress} finished ${res.statusCode} for ${req.method} ${req.url}`);
-    });
-
     let body = '';
     req.on('data', (chunk: string) => {
       body += chunk;
@@ -130,8 +126,13 @@ export default class WebServer {
     }
   }
 
+  private calculateResponseTime(startTime: number) {
+    return Date.now() - startTime;
+  }
+
   // TODO: clean this up, holy hell its a mess now
   private handleRequest(req: IncomingMessage, res: ServerResponse) {
+    const startTime = Date.now();
     const route = this.getRoute(req?.method ?? '', req?.url ?? '');
     logger('info', `${req.connection.remoteAddress} requesting ${req.method} ${req.url}`);
 
@@ -151,10 +152,16 @@ export default class WebServer {
 
     // set a timeout for the request
     const timmy = setTimeout(() => {
-      logger('warn', `${req.connection.remoteAddress} timed out for ${req.method} ${req.url}`);
+      const responseTime = this.calculateResponseTime(startTime);
+      logger('warn', `${req.connection.remoteAddress} timed out for ${req.method} ${req.url} after ${responseTime}ms`);
       res.writeHead(408);
       res.end();
-    }, 5000);
+    }, Number(process.env.HTTP_TIMEOUT ?? 5000));
+
+    res.on('finish', () => {
+      const responseTime = this.calculateResponseTime(startTime);
+      logger('info', `${req.connection.remoteAddress} finished ${res.statusCode} for ${req.method} ${req.url} in ${responseTime}ms`);
+    });
 
     if (!req.on) {
       // @ts-ignore
