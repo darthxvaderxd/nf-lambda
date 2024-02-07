@@ -47,7 +47,8 @@ export default class WebServer {
     );
   }
 
-  private getParams(routePath: string, reqPath: string) {
+  // get the parameters from the route path and the request path
+  private getParams(routePath: string, reqPath: string): { [key: string]: string } {
     if (!routePath.includes(':')) return {};
 
     const routeParts = routePath.split('/');
@@ -64,7 +65,8 @@ export default class WebServer {
     return params;
   }
 
-  private getQuery(url: string) {
+  // get the query parameters from the request url
+  private getQuery(url: string): { [key: string]: string } {
     const query = url.split('?')[1];
     if (!query) return {};
     const queryParts = query.split('&');
@@ -76,7 +78,8 @@ export default class WebServer {
     return queryObj;
   }
 
-  private doOns(cb: (body: string | object | undefined) => void, req: Request, res: ServerResponse) {
+  // handle the data and end events for the request
+  private doOns(startTime: number, cb: (body: string | object | undefined) => void, req: Request, res: ServerResponse) {
     let body = '';
     req.on('data', (chunk: string) => {
       body += chunk;
@@ -99,11 +102,17 @@ export default class WebServer {
         }
       }
 
+      res.on('finish', () => {
+        const responseTime = this.calculateResponseTime(startTime);
+        logger('info', `${req.connection.remoteAddress} finished ${res.statusCode} for ${req.method} ${req.url} in ${responseTime}ms`);
+      });
+
       // @ts-ignore
       cb(body);
     });
   }
 
+  // send the options for the request
   private sendOptions(req: IncomingMessage, res: ServerResponse) {
     const usablePathString = this.getUsablePathString(req.url ?? '');
     const routes = this.routes.filter(route => (
@@ -126,11 +135,23 @@ export default class WebServer {
     }
   }
 
+  // calculate the response time for the request
   private calculateResponseTime(startTime: number) {
     return Date.now() - startTime;
   }
 
-  // TODO: clean this up, holy hell its a mess now
+  // run the route handler
+  private async runRouteHandler(req: Request, res: ServerResponse, route: Route) {
+    const params = this.getParams(route.path, req.url ?? '');
+    const query = this.getQuery(req.url ?? '');
+
+    req.params = params;
+    req.query = query;
+
+    await route.handler(req, res);
+  }
+
+  // the heart of the server, this handles the request
   private handleRequest(req: IncomingMessage, res: ServerResponse) {
     const startTime = Date.now();
     const route = this.getRoute(req?.method ?? '', req?.url ?? '');
@@ -147,9 +168,6 @@ export default class WebServer {
       return;
     }
 
-    const params = this.getParams(route.path, req.url ?? '');
-    const query = this.getQuery(req.url ?? '');
-
     // set a timeout for the request
     const timmy = setTimeout(() => {
       const responseTime = this.calculateResponseTime(startTime);
@@ -158,23 +176,18 @@ export default class WebServer {
       res.end();
     }, Number(process.env.HTTP_TIMEOUT ?? 5000));
 
-    res.on('finish', () => {
-      const responseTime = this.calculateResponseTime(startTime);
-      logger('info', `${req.connection.remoteAddress} finished ${res.statusCode} for ${req.method} ${req.url} in ${responseTime}ms`);
-    });
-
     if (!req.on) {
-      // @ts-ignore
-      return route.handler({ ...req, body: '', params, query }, res);
+      return this.runRouteHandler(req as Request, res, route);
     }
 
-    this.doOns(async (body) => {
+    this.doOns(startTime, async (body) => {
       // @ts-ignore
-      await route.handler({ ...req, body, params, query }, res);
+      await this.runRouteHandler({ ...req, body } as Request, res, route);
       clearTimeout(timmy);
     }, req as Request, res);
   }
 
+  // start the server
   public start() {
     this.server = initServer((req: IncomingMessage, res: ServerResponse) => this.handleRequest(req, res));
     this.server.listen(port, () => {
@@ -182,18 +195,22 @@ export default class WebServer {
     });
   }
 
+  // add a route to the server with the GET method
   public get(path: string, handler: (req: IncomingMessage, res: ServerResponse) => void) {
     this.routes.push({ method: 'GET', path, handler });
   }
 
+  // add a route to the server with the POST method
   public post(path: string, handler: (req: IncomingMessage, res: ServerResponse) => void) {
     this.routes.push({ method: 'POST', path, handler });
   }
 
+  // add a route to the server with the PUT method
   public put(path: string, handler: (req: IncomingMessage, res: ServerResponse) => void) {
     this.routes.push({ method: 'PUT', path, handler });
   }
 
+  // add a route to the server with the DELETE method
   public delete(path: string, handler: (req: IncomingMessage, res: ServerResponse) => void) {
     this.routes.push({ method: 'DELETE', path, handler });
   }
