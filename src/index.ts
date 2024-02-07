@@ -9,6 +9,18 @@ server.get('/', (req, res) => {
   res.end('Hello, World!');
 });
 
+server.get('/test/:id', (req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  // @ts-ignore
+  res.end(`Hello, ${req.params.id}!`);
+});
+
+server.get('/test/:id/more', (req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  // @ts-ignore
+  res.end(`Hello, ${req.params.id} ${req.params.last}! Theres more`);
+});
+
 server.get('/timeout', async (req, res) => {
   try {
     await new Promise(resolve => setTimeout(resolve, 6000));

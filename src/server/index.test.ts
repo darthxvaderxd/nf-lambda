@@ -226,4 +226,34 @@ describe('Server', () => {
     expect(mockRes.writeHead).toHaveBeenCalledWith(400);
     expect(mockRes.end).toHaveBeenCalled();
   });
+
+  test('should handle :id in route', async () => {
+    const server = new Server();
+
+    let mockParams = {};
+    server.get('/test/:id', (req) => {
+      // @ts-ignore
+      mockParams = req.params;
+    });
+
+    const mockReq = {
+      ...mockRequest,
+      url: '/test/123',
+      on: jest.fn((text: string, cb: any) => {
+        cb();
+      }),
+    };
+    const mockRes = {
+      end: jest.fn(),
+      on: jest.fn(),
+    };
+
+    serverMock = jest.fn((cb: any) => {
+      cb(mockReq, mockRes);
+    });
+
+    server.start();
+
+    expect(mockParams).toEqual({ id: '123' });
+  });
 });

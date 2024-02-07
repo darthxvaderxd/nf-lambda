@@ -4,6 +4,7 @@ import logger from '../logger';
 
 interface Request extends IncomingMessage {
   body: string | object | undefined;
+  params: { [key: string]: string };
 }
 
 const port = process.env?.PORT ?? 3000;
@@ -20,14 +21,43 @@ export default class WebServer {
   private routes: Routes[] = [];
 
   private getRoute(method: string, path: string) {
-    // TODO: we need to be able to implement wildcard routes
-    return this.routes.find(route => route.method === method && route.path === path);
+    // TODO: add support for wildcard routes with more than one parameter
+    return this.routes.find(route =>
+      (route.method === method && route.path === path)
+        // search for wildcard routes with string that starts with colon ends with slash using regex
+        || (
+          route.method === method
+          && new RegExp(`^${route.path.replace(/:\w+/, '\\w+')
+            .replace(/\//, '\\/')}$`)
+            .test(path)
+        ),
+    );
   }
 
   private handleRequest(req: IncomingMessage, res: ServerResponse) {
     const route = this.getRoute(req?.method ?? '', req?.url ?? '');
+    const params: { [key: string]: string } = {};
 
     logger('info', `${req.connection.remoteAddress} requesting ${req.method} ${req.url}`);
+
+    if (!route) {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+
+    if (route?.path.includes(':')) {
+      const routeParts = route.path.split('/');
+      const reqParts = req.url?.split('/');
+      for (let i = 0; i < routeParts.length; i++) {
+        if (routeParts[i].startsWith(':')) {
+          const key: string = routeParts[i].substring(1);
+          if (key && reqParts?.[i]) {
+            params[key] = reqParts?.[i];
+          }
+        }
+      }
+    }
 
     // set a timeout for the request
     const timmy = setTimeout(() => {
@@ -36,21 +66,15 @@ export default class WebServer {
       res.end();
     }, 5000);
 
-    if (!route) {
-      res.writeHead(404);
-      res.end();
-      return;
-    }
-
     if (!req.on) {
       // @ts-ignore
-      return route.handler({ ...req, body: '' }, res);
+      return route.handler({ ...req, body: '', params }, res);
     }
 
     res.on('finish', () => {
 	  clearTimeout(timmy);
 	  logger('info', `${req.connection.remoteAddress} finished ${res.statusCode} for ${req.method} ${req.url}`);
-	});
+    });
 
     let body = '';
     req.on('data', (chunk: string) => {
@@ -75,12 +99,12 @@ export default class WebServer {
       }
 
       // @ts-ignore
-      route.handler({ ...req, body }, res);
+      route.handler({ ...req, body, params }, res);
     });
   }
 
   public start() {
-	this.server = initServer((req: IncomingMessage, res: ServerResponse) => this.handleRequest(req, res));
+    this.server = initServer((req: IncomingMessage, res: ServerResponse) => this.handleRequest(req, res));
     this.server.listen(port, () => {
       logger('info', `Server is listening on port ${port}`);
     });
