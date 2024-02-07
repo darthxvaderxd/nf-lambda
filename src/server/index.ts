@@ -21,17 +21,20 @@ export default class WebServer {
 
   private routes: Route[] = [];
 
+  private getUsablePathString(path: string): string {
+    // remove the last slash if it exists and remove query parameters
+    const queryRemoved = path.split('?')[0];
+    return  queryRemoved.endsWith('/') && queryRemoved.length > 1
+      ? queryRemoved.slice(0, -1)
+      : queryRemoved;
+  }
+
   // We need to account for the possibility of a request with query parameters
   // We also need to account for the possibility the path having a trailing slash
   // We need to account for the possibility the url route having :id or similar in it
   // TODO: add support for wildcard routes with more than one parameter
   private getRoute(method: string, path: string): Route | undefined {
-    // remove the last slash if it exists and remove query parameters
-    const queryRemoved = path.split('?')[0];
-    const usablePathString = queryRemoved.endsWith('/') && queryRemoved.length > 1
-        ? queryRemoved.slice(0, -1)
-        : queryRemoved;
-
+    const usablePathString = this.getUsablePathString(path);
     return this.routes.find(route =>
       (route.method === method && route.path === usablePathString)
         // search for wildcard routes with string that starts with colon ends with slash or end of string using regex
@@ -86,7 +89,7 @@ export default class WebServer {
     req.on('end', () => {
       // try to parse the body as JSON
       if (
-          req?.headers?.['content-type'] === 'application/json'
+        req?.headers?.['content-type'] === 'application/json'
           && req.method !== 'GET'
           && body !== ''
       ) {
@@ -105,10 +108,37 @@ export default class WebServer {
     });
   }
 
+  private sendOptions(req: IncomingMessage, res: ServerResponse) {
+    const usablePathString = this.getUsablePathString(req.url ?? '');
+    const routes = this.routes.filter(route => (
+      route.path === usablePathString
+        || new RegExp(`^${route.path.replace(/:\w+/, '\\w+')
+          .replace(/\//, '\\/')}$`)
+          .test(usablePathString)
+    ));
+
+    if (routes.length > 0) {
+      res.writeHead(200, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': routes.map(route => route.method).join(', '),
+        'Access-Control-Allow-Headers': 'Content-Type',
+      });
+      res.end();
+    } else {
+      res.writeHead(404);
+      res.end();
+    }
+  }
+
   // TODO: clean this up, holy hell its a mess now
   private handleRequest(req: IncomingMessage, res: ServerResponse) {
     const route = this.getRoute(req?.method ?? '', req?.url ?? '');
     logger('info', `${req.connection.remoteAddress} requesting ${req.method} ${req.url}`);
+
+    if (req.method === 'OPTIONS') {
+      this.sendOptions(req, res);
+      return;
+    }
 
     if (!route) {
       res.writeHead(404);

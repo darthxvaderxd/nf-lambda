@@ -346,4 +346,63 @@ describe('Server', () => {
 
     expect(mockQuery).toEqual({ foo: 'bar' });
   });
+
+  test('should allow options requests', () => {
+    const server = new Server();
+
+    server.get('/', jest.fn());
+    server.post('/', jest.fn());
+
+    const mockReq = {
+      ...mockRequest,
+      method: 'OPTIONS',
+      on: jest.fn((text: string, cb: any) => {
+        cb();
+      }),
+    };
+    const mockRes = {
+      end: jest.fn(),
+      on: jest.fn(),
+      writeHead: jest.fn(),
+    };
+
+    serverMock = jest.fn((cb: any) => {
+      cb(mockReq, mockRes);
+    });
+
+    server.start();
+
+    expect(mockRes.end).toHaveBeenCalled();
+    expect(mockRes.writeHead).toHaveBeenCalledWith(200, {
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Methods': 'GET, POST',
+      'Access-Control-Allow-Origin': '*',
+    });
+  });
+
+  test('get options should fail if no route', () => {
+    const server = new Server();
+
+    const mockReq = {
+      ...mockRequest,
+      method: 'OPTIONS',
+      on: jest.fn((text: string, cb: any) => {
+        cb();
+      }),
+    };
+    const mockRes = {
+      end: jest.fn(),
+      on: jest.fn(),
+      writeHead: jest.fn(),
+    };
+
+    serverMock = jest.fn((cb: any) => {
+      cb(mockReq, mockRes);
+    });
+
+    server.start();
+
+    expect(mockRes.writeHead).toHaveBeenCalledWith(404);
+    expect(mockRes.end).toHaveBeenCalled();
+  });
 });

@@ -9,6 +9,11 @@ server.get('/', (req, res) => {
   res.end('Hello, World!');
 });
 
+server.post('/', (req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Hello, World!');
+});
+
 server.get('/test/:id', (req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
   // @ts-ignore
@@ -22,10 +27,10 @@ server.get('/test/:id/more', (req, res) => {
 });
 
 server.get('/query', (req, res) => {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    // @ts-ignore
-    res.end(JSON.stringify({ query: req.query }));
-})
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  // @ts-ignore
+  res.end(JSON.stringify({ query: req.query }));
+});
 
 server.get('/timeout', async (req, res) => {
   try {
