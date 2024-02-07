@@ -1,3 +1,4 @@
 build/
 .idea/
+coverage/
 node_modules/

@@ -30,26 +30,34 @@ export default class Server {
 			res.end();
 		}, 5000);
 
-		// log when the response is finished
-	    res.on('finish', () => {
-			clearTimeout(timmy);
-		    logger('info', `${req.connection.remoteAddress} finished ${res.statusCode} for ${req.method} ${req.url}`);
-	    });
-
 		if (!route) {
 			res.writeHead(404);
 			res.end();
 			return;
 		}
 
-		route.handler(req, res);
+		if (!req.on) {
+			return route.handler(req, res);
+		}
+
+	    res.on('finish', () => {
+		    clearTimeout(timmy);
+		    logger('info', `${req.connection.remoteAddress} finished ${res.statusCode} for ${req.method} ${req.url}`);
+	    });
+
+		let body = '';
+		req.on('data', (chunk: any) => {
+			body += chunk;
+		});
+
+		req.on('end', () => {
+			req.body = body;
+			route.handler(req, res);
+		});
     }
 
-	constructor() {
-		this.server = initServer((req: any, res: any) => this.handleRequest(req, res));
-	}
-
     public start() {
+	    this.server = initServer((req: any, res: any) => this.handleRequest(req, res));
 		this.server.listen(port, () => {
 			logger('info', `Server is listening on port ${port}`);
 		});
