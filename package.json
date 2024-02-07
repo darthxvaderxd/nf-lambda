@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest --coverage"
+    "test": "jest --coverage",
+    "start": "yarn build && node build/index.js"
   }
 }

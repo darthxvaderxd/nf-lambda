@@ -52,6 +52,23 @@ export default class Server {
 
 		req.on('end', () => {
 			req.body = body;
+
+			// try to parse the body as JSON
+			if (
+				req?.headers?.['content-type'] === 'application/json'
+				&& req.method !== 'GET'
+				&& body !== ''
+			) {
+				try {
+					req.body = JSON.parse(body);
+				} catch (e) {
+					logger('error', e);
+					res.writeHead(400);
+					res.end();
+					return;
+				}
+			}
+
 			route.handler(req, res);
 		});
     }

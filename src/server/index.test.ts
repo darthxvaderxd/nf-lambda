@@ -151,4 +151,77 @@ describe('Server', () => {
 		expect(mockReq.on).not.toHaveBeenCalled();
 		expect(mockRes.end).toHaveBeenCalled();
 	});
+
+	test('should parse JSON body', async () => {
+		const server = new Server();
+
+		let mockBody = {};
+		server.post('/', (req) => {
+			mockBody = req.body;
+		});
+
+		const mockReq = {
+			...mockRequest,
+			method: 'POST',
+			on: jest.fn((text: string, cb: any) => {
+				if (text === 'data') {
+					cb(JSON.stringify({ foo: 'bar' }));
+				} else {
+					cb();
+				}
+			}),
+			headers: {
+				'content-type': 'application/json',
+			},
+		};
+
+		const mockRes = {
+			end: jest.fn(),
+			on: jest.fn(),
+		};
+
+		serverMock = jest.fn((cb: any) => {
+			cb(mockReq, mockRes);
+		});
+
+		server.start();
+
+		expect(mockBody).toEqual({ foo: 'bar' });
+	});
+
+	test('should handle error when parsing JSON body', async () => {
+		const server = new Server();
+
+		server.post('/', jest.fn());
+
+		const mockReq = {
+			...mockRequest,
+			method: 'POST',
+			on: jest.fn((text: string, cb: any) => {
+				if (text === 'data') {
+					cb('invalid JSON');
+				} else {
+					cb();
+				}
+			}),
+			headers: {
+				'content-type': 'application/json',
+			},
+		};
+
+		const mockRes = {
+			end: jest.fn(),
+			on: jest.fn(),
+			writeHead: jest.fn(),
+		};
+
+		serverMock = jest.fn((cb: any) => {
+			cb(mockReq, mockRes);
+		});
+
+		server.start();
+
+		expect(mockRes.writeHead).toHaveBeenCalledWith(400);
+		expect(mockRes.end).toHaveBeenCalled();
+	});
 });
