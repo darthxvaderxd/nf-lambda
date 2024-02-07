@@ -4,7 +4,8 @@ import logger from '../logger';
 
 interface Request extends IncomingMessage {
   body: string | object | undefined;
-  params: { [key: string]: string };
+  params?: { [key: string]: string };
+  query?: { [key: string]: string };
 }
 
 const port = process.env?.PORT ?? 3000;
@@ -20,24 +21,59 @@ export default class WebServer {
 
   private routes: Routes[] = [];
 
+  // We need to account for the possibility of a request with query parameters
+  // We also need to account for the possibility the path having a trailing slash
+  // We need to account for the possibility the url route having :id or similar in it
+  // TODO: add support for wildcard routes with more than one parameter
   private getRoute(method: string, path: string) {
-    // TODO: add support for wildcard routes with more than one parameter
+    // remove the last slash if it exists and remove query parameters
+    const usablePathString = (path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path)
+      .split('?')[0];
+
     return this.routes.find(route =>
-      (route.method === method && route.path === path)
-        // search for wildcard routes with string that starts with colon ends with slash using regex
+      (route.method === method && route.path === usablePathString)
+        // search for wildcard routes with string that starts with colon ends with slash or end of string using regex
         || (
           route.method === method
           && new RegExp(`^${route.path.replace(/:\w+/, '\\w+')
             .replace(/\//, '\\/')}$`)
-            .test(path)
+            .test(usablePathString)
         ),
     );
   }
 
+  private getParams(routePath: string, reqPath: string) {
+    if (!routePath.includes(':')) return {};
+
+    const routeParts = routePath.split('/');
+    const reqParts = reqPath.split('/');
+    const params: { [key: string]: string } = {};
+    for (let i = 0; i < routeParts.length; i++) {
+      if (routeParts[i].startsWith(':')) {
+        const key: string = routeParts[i].substring(1);
+        if (key && reqParts[i]) {
+          params[key] = reqParts[i];
+        }
+      }
+    }
+    return params;
+  }
+
+  private getQuery(url: string) {
+    const query = url.split('?')[1];
+    if (!query) return {};
+    const queryParts = query.split('&');
+    const queryObj: { [key: string]: string } = {};
+    queryParts.forEach((part) => {
+      const [key, value] = part.split('=');
+      queryObj[key] = value;
+    });
+    return queryObj;
+  }
+
+  // TODO: clean this up, holy hell its a mess now
   private handleRequest(req: IncomingMessage, res: ServerResponse) {
     const route = this.getRoute(req?.method ?? '', req?.url ?? '');
-    const params: { [key: string]: string } = {};
-
     logger('info', `${req.connection.remoteAddress} requesting ${req.method} ${req.url}`);
 
     if (!route) {
@@ -46,18 +82,8 @@ export default class WebServer {
       return;
     }
 
-    if (route?.path.includes(':')) {
-      const routeParts = route.path.split('/');
-      const reqParts = req.url?.split('/');
-      for (let i = 0; i < routeParts.length; i++) {
-        if (routeParts[i].startsWith(':')) {
-          const key: string = routeParts[i].substring(1);
-          if (key && reqParts?.[i]) {
-            params[key] = reqParts?.[i];
-          }
-        }
-      }
-    }
+    const params = this.getParams(route.path, req.url ?? '');
+    const query = this.getQuery(req.url ?? '');
 
     // set a timeout for the request
     const timmy = setTimeout(() => {
@@ -68,7 +94,7 @@ export default class WebServer {
 
     if (!req.on) {
       // @ts-ignore
-      return route.handler({ ...req, body: '', params }, res);
+      return route.handler({ ...req, body: '', params, query }, res);
     }
 
     res.on('finish', () => {
@@ -99,7 +125,7 @@ export default class WebServer {
       }
 
       // @ts-ignore
-      route.handler({ ...req, body, params }, res);
+      route.handler({ ...req, body, params, query }, res);
     });
   }
 

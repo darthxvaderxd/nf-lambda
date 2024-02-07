@@ -126,7 +126,7 @@ describe('Server', () => {
     expect(mockRes.end).not.toHaveBeenCalled();
   });
 
-  test('404 should happen when route not found', async () => {
+  test('404 should happen when route not found', () => {
     const server = new Server();
 
     const mockReq = {
@@ -153,7 +153,7 @@ describe('Server', () => {
     expect(mockRes.end).toHaveBeenCalled();
   });
 
-  test('should parse JSON body', async () => {
+  test('should parse JSON body', () => {
     const server = new Server();
 
     let mockBody = {};
@@ -191,7 +191,7 @@ describe('Server', () => {
     expect(mockBody).toEqual({ foo: 'bar' });
   });
 
-  test('should handle error when parsing JSON body', async () => {
+  test('should handle error when parsing JSON body', () => {
     const server = new Server();
 
     server.post('/', jest.fn());
@@ -227,7 +227,7 @@ describe('Server', () => {
     expect(mockRes.end).toHaveBeenCalled();
   });
 
-  test('should handle :id in route', async () => {
+  test('should handle :id in route', () => {
     const server = new Server();
 
     let mockParams = {};
@@ -239,6 +239,66 @@ describe('Server', () => {
     const mockReq = {
       ...mockRequest,
       url: '/test/123',
+      on: jest.fn((text: string, cb: any) => {
+        cb();
+      }),
+    };
+    const mockRes = {
+      end: jest.fn(),
+      on: jest.fn(),
+    };
+
+    serverMock = jest.fn((cb: any) => {
+      cb(mockReq, mockRes);
+    });
+
+    server.start();
+
+    expect(mockParams).toEqual({ id: '123' });
+  });
+
+  test('should handle query params', () => {
+    const server = new Server();
+
+    let mockQuery = {};
+    server.get('/test', (req) => {
+      // @ts-ignore
+      mockQuery = req.query;
+    });
+
+    const mockReq = {
+      ...mockRequest,
+      url: '/test?foo=bar',
+      on: jest.fn((text: string, cb: any) => {
+        cb();
+      }),
+    };
+    const mockRes = {
+      end: jest.fn(),
+      on: jest.fn(),
+    };
+
+    serverMock = jest.fn((cb: any) => {
+      cb(mockReq, mockRes);
+    });
+
+    server.start();
+
+    expect(mockQuery).toEqual({ foo: 'bar' });
+  });
+
+  test('should handle a slash at the end of the route', () => {
+    const server = new Server();
+
+    let mockParams = {};
+    server.get('/test/:id/bob', (req) => {
+      // @ts-ignore
+      mockParams = req.params;
+    });
+
+    const mockReq = {
+      ...mockRequest,
+      url: '/test/123/bob/',
       on: jest.fn((text: string, cb: any) => {
         cb();
       }),
