@@ -21,6 +21,12 @@ server.get('/test/:id/more', (req, res) => {
   res.end(`Hello, ${req.params.id} ${req.params.last}! Theres more`);
 });
 
+server.get('/query', (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    // @ts-ignore
+    res.end(JSON.stringify({ query: req.query }));
+})
+
 server.get('/timeout', async (req, res) => {
   try {
     await new Promise(resolve => setTimeout(resolve, 6000));

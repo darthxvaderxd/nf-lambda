@@ -316,4 +316,34 @@ describe('Server', () => {
 
     expect(mockParams).toEqual({ id: '123' });
   });
+
+  test('query should work if url ends with a slash', () => {
+    const server = new Server();
+
+    let mockQuery = {};
+    server.get('/test', (req) => {
+      // @ts-ignore
+      mockQuery = req.query;
+    });
+
+    const mockReq = {
+      ...mockRequest,
+      url: '/test/?foo=bar',
+      on: jest.fn((text: string, cb: any) => {
+        cb();
+      }),
+    };
+    const mockRes = {
+      end: jest.fn(),
+      on: jest.fn(),
+    };
+
+    serverMock = jest.fn((cb: any) => {
+      cb(mockReq, mockRes);
+    });
+
+    server.start();
+
+    expect(mockQuery).toEqual({ foo: 'bar' });
+  });
 });

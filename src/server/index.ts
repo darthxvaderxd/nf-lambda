@@ -27,8 +27,10 @@ export default class WebServer {
   // TODO: add support for wildcard routes with more than one parameter
   private getRoute(method: string, path: string) {
     // remove the last slash if it exists and remove query parameters
-    const usablePathString = (path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path)
-      .split('?')[0];
+    const queryRemoved = path.split('?')[0];
+    const usablePathString = queryRemoved.endsWith('/') && queryRemoved.length > 1
+        ? queryRemoved.slice(0, -1)
+        : queryRemoved;
 
     return this.routes.find(route =>
       (route.method === method && route.path === usablePathString)
