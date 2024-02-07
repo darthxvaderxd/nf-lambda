@@ -20,6 +20,12 @@
     "build": "tsc",
     "test": "jest --coverage",
     "start": "yarn build && node build/index.js",
-    "lint": "eslint . --ext .ts --fix"
+    "lint": "eslint . --ext .ts --fix",
+    "db:generate": "node ./scripts/create-migration.js",
+    "db:migrate": "yarn build && node ./scripts/migrate.js",
+    "db:rollback": "yarn build && node ./scripts/rollback.js"
+  },
+  "dependencies": {
+    "pg": "^8.11.3"
   }
 }

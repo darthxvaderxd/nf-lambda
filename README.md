@@ -23,6 +23,11 @@ USE_SSL=true // if you want to use https
 SSL_KEY="path/to/ssl/key" // the path to the SSL key
 SSL_CERT="path/to/ssl/cert" // the path to the SSL cert
 HTTP_TIMEOUT=30000 // the timeout for http requests
+DB_USER=postgres // the database user
+DB_PASSWORD=postgres // the database password
+DB_NAME=nf_lambda // the database name
+DB_HOST=localhost // the database host
+DB_PORT=5432 // the database port
 ```
 
 ## Contributing

@@ -2,7 +2,7 @@ import { IncomingMessage, ServerResponse, Server } from 'http';
 import { initServer } from './server-helper';
 import logger from '../logger';
 
-interface Request extends IncomingMessage {
+export interface Request extends IncomingMessage {
   body: string | object | undefined;
   params?: { [key: string]: string };
   query?: { [key: string]: string };
