@@ -10,7 +10,7 @@ interface Request extends IncomingMessage {
 
 const port = process.env?.PORT ?? 3000;
 
-export interface Routes {
+export interface Route {
   method: string;
   path: string;
   handler: (req: Request, res: ServerResponse) => void;
@@ -19,13 +19,13 @@ export interface Routes {
 export default class WebServer {
   private server: Server<typeof IncomingMessage, typeof ServerResponse> | undefined;
 
-  private routes: Routes[] = [];
+  private routes: Route[] = [];
 
   // We need to account for the possibility of a request with query parameters
   // We also need to account for the possibility the path having a trailing slash
   // We need to account for the possibility the url route having :id or similar in it
   // TODO: add support for wildcard routes with more than one parameter
-  private getRoute(method: string, path: string) {
+  private getRoute(method: string, path: string): Route | undefined {
     // remove the last slash if it exists and remove query parameters
     const queryRemoved = path.split('?')[0];
     const usablePathString = queryRemoved.endsWith('/') && queryRemoved.length > 1
@@ -73,6 +73,38 @@ export default class WebServer {
     return queryObj;
   }
 
+  private doOns(cb: (body: string | object | undefined) => void, req: Request, res: ServerResponse) {
+    res.on('finish', () => {
+      logger('info', `${req.connection.remoteAddress} finished ${res.statusCode} for ${req.method} ${req.url}`);
+    });
+
+    let body = '';
+    req.on('data', (chunk: string) => {
+      body += chunk;
+    });
+
+    req.on('end', () => {
+      // try to parse the body as JSON
+      if (
+          req?.headers?.['content-type'] === 'application/json'
+          && req.method !== 'GET'
+          && body !== ''
+      ) {
+        try {
+          body = JSON.parse(body);
+        } catch (e) {
+          logger('error', e);
+          res.writeHead(400);
+          res.end();
+          return;
+        }
+      }
+
+      // @ts-ignore
+      cb(body);
+    });
+  }
+
   // TODO: clean this up, holy hell its a mess now
   private handleRequest(req: IncomingMessage, res: ServerResponse) {
     const route = this.getRoute(req?.method ?? '', req?.url ?? '');
@@ -99,36 +131,11 @@ export default class WebServer {
       return route.handler({ ...req, body: '', params, query }, res);
     }
 
-    res.on('finish', () => {
-	  clearTimeout(timmy);
-	  logger('info', `${req.connection.remoteAddress} finished ${res.statusCode} for ${req.method} ${req.url}`);
-    });
-
-    let body = '';
-    req.on('data', (chunk: string) => {
-      body += chunk;
-    });
-
-    req.on('end', () => {
-      // try to parse the body as JSON
-      if (
-        req?.headers?.['content-type'] === 'application/json'
-				&& req.method !== 'GET'
-				&& body !== ''
-      ) {
-        try {
-          body = JSON.parse(body);
-        } catch (e) {
-          logger('error', e);
-          res.writeHead(400);
-          res.end();
-          return;
-        }
-      }
-
+    this.doOns(async (body) => {
       // @ts-ignore
-      route.handler({ ...req, body, params, query }, res);
-    });
+      await route.handler({ ...req, body, params, query }, res);
+      clearTimeout(timmy);
+    }, req as Request, res);
   }
 
   public start() {
