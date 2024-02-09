@@ -2,7 +2,7 @@ import { hash } from '../db/hash';
 import Role from './role';
 
 export default class User {
-  id: string;
+  id: string = '';
 
   username: string;
 

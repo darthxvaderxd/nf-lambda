@@ -10,7 +10,7 @@ import User from '../entity/user';
 export async function getUser(
   id: string,
   withRole: boolean = false,
-): Promise<User> {
+): Promise<User | null> {
   let sql = 'SELECT * FROM users WHERE id = $1';
   const params = [id];
 
@@ -30,7 +30,12 @@ export async function getUser(
   }
 
   const result = await query(sql, params);
-  let role = null;
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  let role = undefined;
 
   if (withRole) {
     role = new Role(
@@ -61,7 +66,7 @@ export async function getUser(
 export async function getUserByUsername(
   username: string,
   withRole: boolean = false,
-): Promise<User> {
+): Promise<User | null> {
   let sql = 'SELECT * FROM users WHERE username = $1';
   const params = [username];
 
@@ -81,7 +86,12 @@ export async function getUserByUsername(
   }
 
   const result = await query(sql, params);
-  let role = null;
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  let role = undefined;
 
   if (withRole) {
     role = new Role(
@@ -168,8 +178,6 @@ export async function saveUser(user: User): Promise<User> {
   } catch (error) {
     await rollbackTransaction(client);
     throw error;
-  } finally {
-    client.release(); // shouldn't be necessary, but just in case
   }
 
   return user;
@@ -185,7 +193,5 @@ export async function deleteUser(username: string) {
   } catch (error) {
     await rollbackTransaction(client);
     throw error;
-  } finally {
-    client.release(); // shouldn't be necessary, but just in case
   }
 }

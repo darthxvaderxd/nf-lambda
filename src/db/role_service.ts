@@ -6,10 +6,15 @@ import {
 } from './db';
 import Role from '../entity/role';
 
-export async function getRole(id: string): Promise<Role> {
+export async function getRole(id: string): Promise<Role | null> {
   const sql = 'SELECT * FROM roles WHERE id = $1';
   const params = [id];
   const result = await query(sql, params);
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
   return new Role(
     result.rows[0].id,
     result.rows[0].name,
@@ -68,8 +73,6 @@ export async function saveRole(role: Role): Promise<Role> {
   } catch (error) {
     await rollbackTransaction(client);
     throw error;
-  } finally {
-    client.release(); // shouldn't need this, but just in case
   }
 
   return role;
@@ -85,7 +88,5 @@ export async function deleteRole(id: string): Promise<void> {
   } catch (error) {
     await rollbackTransaction(client);
     throw error;
-  } finally {
-    client.release(); // shouldn't need this, but just in case
   }
 }

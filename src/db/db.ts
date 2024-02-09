@@ -1,6 +1,13 @@
 import { Pool, PoolClient } from 'pg';
-import * as config from './config';
 import logger from '../logger';
+
+const config = {
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres',
+  database: process.env.DB_NAME || 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+};
 
 const pool = new Pool({
   user: config.user,
