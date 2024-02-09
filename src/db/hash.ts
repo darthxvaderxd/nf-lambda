@@ -11,8 +11,8 @@ export function hash(data: string): string {
   return `${hmac.digest('hex')}.${key}`;
 }
 
-export function verify(data: string, hash: string): boolean {
-  const [hashValue, key] = hash.split('.');
+export function verify(data: string, encrypted: string): boolean {
+  const [hashValue, key] = encrypted.split('.');
   const hmac = crypto.createHmac('sha512', key);
   hmac.update(data);
   return hmac.digest('hex') === hashValue;
