@@ -3,7 +3,7 @@ import { initServer } from './server-helper';
 import logger from '../logger';
 
 export interface Request extends IncomingMessage {
-  body: string | object | undefined;
+  body?: string | { [key: string]: string | number | object } | undefined;
   params?: { [key: string]: string };
   query?: { [key: string]: string };
 }

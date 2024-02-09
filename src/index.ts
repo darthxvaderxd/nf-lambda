@@ -1,43 +1,51 @@
-import Server from './server';
+import Server, { Request } from './server';
 import logger from './logger';
+import { login } from './db/user_service';
+import User from './entity/user';
+import auth from './server/auth';
 
 const server = new Server();
 server.start();
 
 server.get('/', (req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Hello, World!');
+  res.writeHead(200);
+  res.end('Hello World from NF-Lambda!');
 });
 
-server.post('/', (req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Hello, World!');
+server.get('/lambdas', (req, res) => {
+  auth(req, res, () => {
+    res.writeHead(200);
+    res.end('Lambdas');
+  });
 });
 
-server.get('/test/:id', (req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  // @ts-ignore
-  res.end(`Hello, ${req.params.id}!`);
-});
+server.post('/login', async (req: Request, res) => {
+  const { username, password } = req?.body as { username: string, password: string } || {};
 
-server.get('/test/:id/more', (req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  // @ts-ignore
-  res.end(`Hello, ${req.params.id} ${req.params.last}! Theres more`);
-});
+  if (!username || !password) {
+    logger('info', 'Invalid login attempt username and password are required');
 
-server.get('/query', (req, res) => {
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  // @ts-ignore
-  res.end(JSON.stringify({ query: req.query }));
-});
+    res.writeHead(400);
+    res.end('Username and password are required');
 
-server.get('/timeout', async (req, res) => {
-  try {
-    await new Promise(resolve => setTimeout(resolve, 6000));
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Hello, World!');
-  } catch (e) {
-    logger('error', e);
+    return;
   }
+
+  const user: User | null = await login(username, password);
+
+  if (!user) {
+    logger('info', `Invalid login attempt: ${username}`);
+
+    res.writeHead(401);
+    res.end('Invalid username or password');
+
+    return;
+  }
+
+  // don't send the password back
+  user.password = '';
+  logger('info', `User logged in: ${username}`);
+
+  res.writeHead(200);
+  res.end(JSON.stringify({ user }));
 });

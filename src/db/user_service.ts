@@ -6,6 +6,7 @@ import {
 } from './db';
 import Role from '../entity/role';
 import User from '../entity/user';
+import { verify } from './hash';
 
 export async function getUser(
   id: string,
@@ -194,4 +195,14 @@ export async function deleteUser(username: string) {
     await rollbackTransaction(client);
     throw error;
   }
+}
+
+export async function login(username: string, password: string): Promise<User | null> {
+  const user = await getUserByUsername(username);
+
+  if (!user || !verify(password, user.password)) {
+    return null;
+  }
+
+  return user;
 }
