@@ -12,7 +12,7 @@ export default class User {
 
   role_id: string;
 
-  role: Role | undefined;
+  role: Role | null;
 
   created_at: string;
 

@@ -1,10 +1,11 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { login } from '../db/user_service';
+import User from '../entity/user';
 
 export default async function (
   req: IncomingMessage,
   res: ServerResponse,
-  next: (req: IncomingMessage, res: ServerResponse) => Promise<void>,
+  next: (req: IncomingMessage, res: ServerResponse, user: User) => Promise<void>,
 ) {
   // @ts-ignore
   const headers: { [key: string]: string; } = {};
@@ -26,11 +27,12 @@ export default async function (
 	  'base64',
   ).toString().split(':');
 
-  if (!await login(username, password)) {
+  const user = await login(username, password);
+  if (!user) {
     res.writeHead(401);
     res.end('Unauthorized Request');
     return;
   }
 
-  return next(req, res);
+  return next(req, res, user);
 }
