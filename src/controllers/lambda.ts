@@ -12,6 +12,10 @@ import {
 } from '../db/lambda_service';
 import Lambda from '../entity/lambda';
 
+afterAll(() => {
+  jest.resetModules();
+});
+
 interface LambdaRequest extends IncomingMessage {
   body: {
     id?: string;
@@ -45,7 +49,7 @@ export default class LambdaController extends BaseController {
     res.end(JSON.stringify(lambdas));
   }
 
-  public async getLambda(req: Request, res: ServerResponse, user: User) {
+  public async getLambda(req: Request, res: ServerResponse, user: User | null) {
     if (!user) {
       res.writeHead(401);
       res.end('Unauthorized Request');
@@ -80,7 +84,7 @@ export default class LambdaController extends BaseController {
     res.end(JSON.stringify(lambda));
   }
 
-  public async createLambda(req: LambdaRequest, res: ServerResponse, user: User) {
+  public async createLambda(req: LambdaRequest, res: ServerResponse, user: User | null) {
     if (!user) {
       res.writeHead(401);
       res.end('Unauthorized Request');
@@ -94,6 +98,12 @@ export default class LambdaController extends BaseController {
       dockerfile,
       enabled,
     } = req?.body;
+
+    if (!req?.body.name || !req?.body.description || !req?.body.dockerfile) {
+      res.writeHead(400);
+      res.end('Bad Request');
+      return;
+    }
 
     const lambda = id
       ? await getLambdaById(
@@ -116,6 +126,15 @@ export default class LambdaController extends BaseController {
       res.writeHead(404);
       res.end(`lambda by id ${id} not found`);
       return;
+    } else if (id && lambda.created_by !== user.id && user.role?.name !== 'admin') {
+      res.writeHead(401);
+      res.end('Unauthorized Request');
+      return;
+    } else if (id && lambda) {
+      lambda.name = name;
+      lambda.description = description;
+      lambda.dockerfile = dockerfile;
+      lambda.enabled = enabled;
     }
 
     const updatedLambda = await saveLambda(lambda);
@@ -129,7 +148,7 @@ export default class LambdaController extends BaseController {
     res.end(JSON.stringify(lambda));
   }
 
-  async deleteLambda(req: Request, res: ServerResponse, user: User) {
+  async deleteLambda(req: Request, res: ServerResponse, user: User | null) {
     if (!user) {
       res.writeHead(401);
       res.end('Unauthorized Request');
@@ -152,6 +171,7 @@ export default class LambdaController extends BaseController {
     if (!lambda) {
       res.writeHead(404);
       res.end(`lambda by id ${id} not found`);
+      return;
     }
 
     await deleteLambda(id);

@@ -30,6 +30,11 @@ export default class WebServer {
   }
 
   private meetsWildCardRoute(path: string, routePath:string): boolean {
+    // here is the old way for reference
+    // const regex = new RegExp(`^${routePath.replace(/:\w+/, '\\w+')
+    //   .replace(/\//, '\\/')}$`);
+    // return regex.test(path);
+
     if (!routePath.includes(':')) return false;
 
     const routeParts = routePath.split('/');
@@ -37,13 +42,16 @@ export default class WebServer {
 
     if (routeParts.length !== pathParts.length) return false;
 
+    // not a fan of this, there was a regex solution that was more elegant
+    // however it was only working for the first part of the path
+    // and not working for uuids or other paths with hyphens
     for (let i = 0; i < routeParts.length; i++) {
-        if (routeParts[i].startsWith(':')) {
-            continue;
-        }
-        if (routeParts[i] !== pathParts[i]) {
-            return false;
-        }
+      if (routeParts[i].startsWith(':')) {
+        continue;
+      }
+      if (routeParts[i] !== pathParts[i]) {
+        return false;
+      }
     }
     return true;
   }
