@@ -4,7 +4,7 @@ import { login } from '../db/user_service';
 export default async function (
   req: IncomingMessage,
   res: ServerResponse,
-  next: () => void,
+  next: (req: IncomingMessage, res: ServerResponse) => Promise<void>,
 ) {
   // @ts-ignore
   const headers: { [key: string]: string; } = {};
@@ -32,5 +32,5 @@ export default async function (
     return;
   }
 
-  next();
+  return next(req, res);
 }

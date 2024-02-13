@@ -214,4 +214,11 @@ export default class WebServer {
   public delete(path: string, handler: (req: IncomingMessage, res: ServerResponse) => void) {
     this.routes.push({ method: 'DELETE', path, handler });
   }
+
+  public printRoutes() {
+    logger('info', 'Routes:');
+    this.routes.forEach(route => {
+      logger('info', `- ${route.method} ${route.path}`);
+    });
+  }
 }
