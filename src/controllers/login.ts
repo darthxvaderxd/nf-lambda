@@ -4,7 +4,7 @@ import User from '../entity/user';
 import { login } from '../db/user_service';
 import logger from '../logger';
 
-interface LoginRequest extends IncomingMessage {
+export interface LoginRequest extends IncomingMessage {
   body?: {
     username: string;
     password: string;

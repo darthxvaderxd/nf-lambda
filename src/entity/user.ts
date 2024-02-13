@@ -34,7 +34,7 @@ export default class User {
     this.password = password;
     this.email = email;
     this.role_id = role_id;
-    this.role = role;
+    this.role = role || null;
     this.created_at = created_at;
     this.updated_at = updated_at;
     this.enabled = enabled;

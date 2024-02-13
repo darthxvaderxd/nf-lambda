@@ -1,6 +1,6 @@
 import BaseController from './base-controller';
 import auth from '../server/auth';
-import { ServerResponse } from 'http';
+import { IncomingMessage, ServerResponse } from 'http';
 import { Request } from '../server';
 import User from '../entity/user';
 import { getRole } from '../db/role_service';
@@ -12,18 +12,19 @@ import {
 } from '../db/lambda_service';
 import Lambda from '../entity/lambda';
 
-interface LambdaRequest extends Request {
+interface LambdaRequest extends IncomingMessage {
   body: {
     id?: string;
     name: string;
     description: string;
     dockerfile: string;
     enabled: boolean;
-  }
+  };
+  params: { id: string };
 }
 
 export default class LambdaController extends BaseController {
-  public async listLambdas(req: Request, res: ServerResponse, user: User) {
+  public async listLambdas(req: Request, res: ServerResponse, user: User | null) {
     if (!user) {
       res.writeHead(401);
       res.end('Unauthorized Request');
@@ -51,7 +52,7 @@ export default class LambdaController extends BaseController {
       return;
     }
 
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     if (!id) {
       res.writeHead(400);
       res.end('Bad Request');
@@ -87,7 +88,7 @@ export default class LambdaController extends BaseController {
     }
 
     const {
-      id = '',
+      id = req.params?.id ?? '',
       name,
       description,
       dockerfile,
@@ -97,7 +98,7 @@ export default class LambdaController extends BaseController {
     const lambda = id
       ? await getLambdaById(
         id,
-        user.role === 'admin' ? '' : user.id,
+        user?.role?.name === 'admin' ? '' : user.id,
       )
       : new Lambda(
         '',
@@ -135,7 +136,7 @@ export default class LambdaController extends BaseController {
       return;
     }
 
-    const { id } = req.params;
+    const { id } =  req.params as { id: string };
 
     if (!id) {
       res.writeHead(400);
@@ -145,7 +146,7 @@ export default class LambdaController extends BaseController {
 
     const lambda = await getLambdaById(
       id,
-      user.role === 'admin' ? '' : user.id,
+      user?.role?.name === 'admin' ? '' : user.id,
     );
 
     if (!lambda) {
@@ -162,27 +163,31 @@ export default class LambdaController extends BaseController {
   public initRoutes() {
     this.server.get(
       '/lambdas',
-      (req: Request, res: ServerResponse) => auth(req, res, this.listLambdas),
+      (req: IncomingMessage, res: ServerResponse) => auth(req, res, this.listLambdas),
     );
 
     this.server.get(
       '/lambdas/:id',
-      (req: Request, res: ServerResponse) => auth(req, res, this.getLambda),
+      (req: IncomingMessage, res: ServerResponse) => auth(req, res, this.getLambda),
     );
 
     this.server.post(
-        '/lambdas',
-        (req: Request, res: ServerResponse) => auth(req, res, this.createLambda),
+      '/lambdas',
+      (req: IncomingMessage, res: ServerResponse) => auth(req, res, (rq, rs, user) => {
+        return this.createLambda(rq as LambdaRequest, rs, user);
+      }),
     );
 
     this.server.put(
-        '/lambdas/:id',
-        (req: Request, res: ServerResponse) => auth(req, res, this.createLambda),
+      '/lambdas/:id',
+      (req: IncomingMessage, res: ServerResponse) => auth(req, res, (rq, rs, user) => {
+        return this.createLambda(rq as LambdaRequest, rs, user);
+      }),
     );
 
     this.server.delete(
-        '/lambdas/:id',
-        (req: Request, res: ServerResponse) => auth(req, res, this.deleteLambda),
-    )
+      '/lambdas/:id',
+      (req: IncomingMessage, res: ServerResponse) => auth(req, res, this.deleteLambda),
+    );
   }
 }

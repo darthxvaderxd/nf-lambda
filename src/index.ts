@@ -1,11 +1,10 @@
-import Server from './server';
 import WebServer from './server';
 import LoginController from './controllers/login';
 import IndexController from './controllers';
 import LambdaController from './controllers/lambda';
 import logger from './logger';
 
-const server: WebServer = new Server();
+const server: WebServer = new WebServer();
 server.start();
 
 const controllers = [

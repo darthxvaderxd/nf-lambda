@@ -29,6 +29,12 @@ export default class WebServer {
       : queryRemoved;
   }
 
+  private meetsWildCardRoute(path: string, routePath:string): boolean {
+    return new RegExp(`^${routePath.replace(/:\w+/, '\\w+')
+      .replace(/\//, '\\/')}$`)
+      .test(path);
+  }
+
   // We need to account for the possibility of a request with query parameters
   // We also need to account for the possibility the path having a trailing slash
   // We need to account for the possibility the url route having :id or similar in it
@@ -40,9 +46,7 @@ export default class WebServer {
         // search for wildcard routes with string that starts with colon ends with slash or end of string using regex
         || (
           route.method === method
-          && new RegExp(`^${route.path.replace(/:\w+/, '\\w+')
-            .replace(/\//, '\\/')}$`)
-            .test(usablePathString)
+          && this.meetsWildCardRoute(usablePathString, route.path)
         ),
     );
   }
@@ -163,6 +167,7 @@ export default class WebServer {
     }
 
     if (!route) {
+      logger('debug', `route not found for ${req.method} ${req.url}`);
       res.writeHead(404);
       res.end();
       return;
