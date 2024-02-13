@@ -30,15 +30,27 @@ export default class WebServer {
   }
 
   private meetsWildCardRoute(path: string, routePath:string): boolean {
-    return new RegExp(`^${routePath.replace(/:\w+/, '\\w+')
-      .replace(/\//, '\\/')}$`)
-      .test(path);
+    if (!routePath.includes(':')) return false;
+
+    const routeParts = routePath.split('/');
+    const pathParts = path.split('/');
+
+    if (routeParts.length !== pathParts.length) return false;
+
+    for (let i = 0; i < routeParts.length; i++) {
+        if (routeParts[i].startsWith(':')) {
+            continue;
+        }
+        if (routeParts[i] !== pathParts[i]) {
+            return false;
+        }
+    }
+    return true;
   }
 
   // We need to account for the possibility of a request with query parameters
   // We also need to account for the possibility the path having a trailing slash
   // We need to account for the possibility the url route having :id or similar in it
-  // TODO: add support for wildcard routes with more than one parameter
   private getRoute(method: string, path: string): Route | undefined {
     const usablePathString = this.getUsablePathString(path);
     return this.routes.find(route =>
