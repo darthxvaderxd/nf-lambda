@@ -59,7 +59,10 @@ async function runMigration(migration) {
 	const { name, file } = migration;
 	const migrationModule = require(`../migrations/${file}`);
 	const instance = new migrationModule();
-	await instance.up(client);
+	await instance.up({ query: (sql, params = []) => {
+		console.log('Running query:', sql, params);
+		return client.query(sql, params);
+	}});
 	await client.query('INSERT INTO migrations (name) VALUES ($1)', [name]);
 	console.log(`Ran migration: ${name}`);
 }

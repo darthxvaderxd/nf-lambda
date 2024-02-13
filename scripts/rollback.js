@@ -24,7 +24,10 @@ function removeMigrationFromTable(migration) {
 async function rollbackMigration(migration) {
 	const Migration = require(`../migrations/${migration}.js`);
 	const migrationInstance = new Migration();
-	await migrationInstance.down(client);
+	await migrationInstance.down({ query: (sql, params = []) => {
+		console.log('Running query:', sql, params);
+		return client.query(sql, params);
+	}});
 }
 
 async function rollback() {
