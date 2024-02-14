@@ -8,6 +8,7 @@ import {
   deleteLambda,
   getLambdaById,
   getLambdas,
+  getLambdaExecutions,
   saveLambda,
 } from '../db/lambda_service';
 import Lambda from '../entity/lambda';
@@ -80,8 +81,13 @@ export default class LambdaController extends BaseController {
       return;
     }
 
+    const executions = await getLambdaExecutions(lambda.id);
+
     res.writeHead(200);
-    res.end(JSON.stringify(lambda));
+    res.end(JSON.stringify({
+      ...lambda,
+      executions,
+    }));
   }
 
   public async createLambda(req: LambdaRequest, res: ServerResponse, user: User | null) {
