@@ -7,7 +7,7 @@ import Role from '../entity/role';
 jest.mock('../server');
 
 const adminUser = {
-  id: '48096a2c-2154-4e99-8beb-6a68de5f67a4',
+  id: '10000000-0000-0000-0000-000000000001',
   username: 'admin',
   password: '',
   email: 'admin@localhost',

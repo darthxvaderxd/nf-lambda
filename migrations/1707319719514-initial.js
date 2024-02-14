@@ -76,8 +76,9 @@ class initial {
 		// insert default admin user
 		runner.query(`
 			INSERT INTO users 
-				(username, email, password, role_id) 
+				(id, username, email, password, role_id) 
 			VALUES (
+				'10000000-0000-0000-0000-000000000001',
 				'admin',
 				'admin@localhost.com',
 				'${await hash('password')}',

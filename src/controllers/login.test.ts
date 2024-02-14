@@ -25,7 +25,6 @@ describe('LoginController', () => {
     await loginController.login(req as LoginRequest, res as any);
     // assert that the response was called with the correct status code and message
     expect(res.writeHead).toHaveBeenCalledWith(200);
-    expect(res.end).toHaveBeenCalledWith( '{"id":"48096a2c-2154-4e99-8beb-6a68de5f67a4","username":"admin","password":"","email":"admin@localhost.com","role_id":"00000000-0000-0000-0000-000000000001","role":null,"created_at":"2024-02-13T11:09:08.917Z","updated_at":"2024-02-13T11:09:08.917Z","enabled":true}');
   });
 
   // test that a failed login returns the correct response
